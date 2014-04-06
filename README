@@ -1,3 +1,16 @@
 Pinboard ist ein Projekt aus dem FIT Cup 2014 für den Raspberry PI.
 
 Ein elektronisches Pinboard für die Kaffeeküche zum Anzeigen von Nachrichten aus der Welt von MaibornWolff.
+
+INSTALLATION
+------------
+
+Für den OpenVG-Wrapper:
+-----------------------
+sudo apt-get install libjpeg8-dev
+
+Für die Bildverarbeitung:
+-------------------------
+sudo apt-get install imagemagick
+sudo aptitude install libmagickwand-dev
+go get github.com/gosexy/canvas
