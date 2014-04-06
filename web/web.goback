@@ -1,0 +1,431 @@
+package web
+
+/*
+#include <curl/curl.h>
+*/
+import "C"
+
+import (
+	"bytes"
+	"fmt"
+	curl "github.com/andelf/go-curl"
+	"github.com/jhillyerd/go.enmime"
+	"net/mail"
+	"os"
+	"time"
+)
+
+type EmailAccount struct {
+	easy          *curl.CURL
+	isConnected   bool
+	isInitialized bool
+	URL           string
+}
+
+type MailData struct {
+	Date              time.Time
+	From, To, Subject string
+	Filenames         []string
+}
+
+func main() {
+	
+	client, er := DialTLS("pop-mail.outlook.com:995", nil) 
+	if er != nil {
+		fmt.Print(er.Error())
+		return
+	}
+	defer client.Quit()
+		
+	er = client.Auth("mw-memories@outlook.de", "fitcup2014")
+	if er != nil {
+		fmt.Print(er.Error())
+		return
+	}
+
+	msgNrs, _, er := client.ListAll()
+	if er != nil {
+		fmt.Print(er.Error())
+		return
+	}
+	fmt.Printf("## Messages: %v\n",msgNrs)
+	
+	
+	for i := 0; i < len(msgNrs); i++ {
+		// retrieve message 
+		msg, er := client.RetrMsg(msgNrs[i])
+		if er != nil {
+			fmt.Print(er.Error())
+			return
+		}
+		msginfo, er := ProcessMessage(msg)
+		if er != nil {
+			fmt.Print(er.Error())
+			return
+		}
+		fmt.Printf("## Message %v: %v\n",msgNrs[i], msginfo)
+		//delete message on the server		
+		er = client.Dele(msgNrs[i])
+		if er != nil {
+			fmt.Print(er.Error())
+			return
+		}
+	}
+	
+	msgNrs, _, er = client.ListAll()
+	if er != nil {
+		fmt.Print(er.Error())
+		return
+	}
+	er = client.Rset()
+	if er != nil {
+		fmt.Print(er.Error())
+		return
+	}
+	msgNrs, _, er = client.ListAll()
+	if er != nil {
+		fmt.Print(er.Error())
+		return
+	}
+	
+	
+	
+	if true {return}
+		
+	
+
+
+
+
+
+
+	
+	account := new(EmailAccount)
+	account.Init("pop3s://pop-mail.outlook.com:995")
+	//account.Init("imaps://imap-mail.outlook.com:993")
+	defer account.Cleanup()
+
+	err := account.Connect("mw-memories@outlook.de", "fitcup2014")
+	if err != nil {
+		fmt.Print(err.Error())
+	}
+
+	err = account.List()
+	if err != nil {
+		fmt.Print(err.Error())
+	}
+
+	for i := 0; i < 3; {
+
+		fmt.Print("\n### Get the first mail\n\n")
+		msg, err := account.GetFirstMail()
+		if err != nil {
+			fmt.Print(err.Error())
+		}
+
+		if msg != nil {
+			data, err := account.ProcessMessage(msg)
+			if err != nil {
+				fmt.Print(err.Error())
+			}
+			fmt.Printf("Data: %v\n", data)
+			fmt.Print("\n### Delete the first mail\n\n")
+			err = account.DeleteFirstMail()
+			if err != nil {
+				fmt.Print(err.Error())
+			}
+		}
+
+		time.Sleep(15 * time.Second)
+
+		i = i + 1
+	}
+}
+
+
+func ProcessMessage(msg *mail.Message) (*MailData, error) {
+
+	data := new(MailData)
+
+	mime, err := enmime.ParseMIMEBody(msg) // Parse message body with enmime
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parse MIME body: ", err.Error())
+	}
+
+	data.Date, err = msg.Header.Date()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get date from message: ", err.Error())
+	}
+	data.Subject = mime.GetHeader("Subject")
+	data.From = mime.GetHeader("From")
+	data.To = mime.GetHeader("To")
+
+	for _, a := range mime.Attachments {
+		fn, err := checkAndSaveAttachment(a)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to checkAndSaveAttachment: ", err.Error())
+		}
+		if fn != nil {
+			data.Filenames = append(data.Filenames, *fn)
+		}
+	}
+	return data, nil
+}
+
+
+func (account *EmailAccount) Connect(username, password string) error {
+
+	if !account.isInitialized {
+		return fmt.Errorf("The account is not initialized.")
+	}
+
+	easy := account.easy
+
+	err := easy.Setopt(curl.OPT_URL, account.URL)
+	if err != nil {
+		return fmt.Errorf("Failed to set curl URL: ", err.Error())
+	}
+	err = easy.Setopt(curl.OPT_USERNAME, username)
+	if err != nil {
+		return fmt.Errorf("Failed to set curl Username: ", err.Error())
+	}
+	err = easy.Setopt(curl.OPT_PASSWORD, password)
+	if err != nil {
+		return fmt.Errorf("Failed to set curl Password: ", err.Error())
+	}
+	err = easy.Setopt(curl.OPT_USE_SSL, 1)
+	if err != nil {
+		return fmt.Errorf("Failed to set curl SSL mode: ", err.Error())
+	}
+	err = easy.Setopt(curl.OPT_VERBOSE, true)
+	if err != nil {
+		return fmt.Errorf("Failed to set curl verbose: ", err.Error())
+	}
+
+	account.isConnected = true
+
+	return nil
+}
+
+func (account *EmailAccount) Init(url string) error {
+	if account.isInitialized {
+		return fmt.Errorf("The account is already initialized.")
+	}
+	curl.GlobalInit(curl.GLOBAL_ALL)
+	account.easy = curl.EasyInit()
+	account.URL = url
+	account.isInitialized = true
+	return nil
+}
+
+func (account *EmailAccount) Cleanup() {
+	if account.isInitialized {
+		account.easy.Cleanup()
+		curl.GlobalCleanup()
+		account.isInitialized = false
+	}
+}
+
+func (account *EmailAccount) Noop() error {
+	if !account.isInitialized {
+		return fmt.Errorf("The account is not initialized.")
+	}
+	easy := account.easy
+
+	err := easy.Setopt(curl.OPT_URL, account.URL)
+	if err != nil {
+		return fmt.Errorf("Failed to set curl URL: ", err.Error())
+	}
+
+	err = easy.Setopt(curl.OPT_CUSTOMREQUEST, "NOOP")
+	if err != nil {
+		return fmt.Errorf("Failed to set custom request: ", err.Error())
+	}
+	err = easy.Setopt(curl.OPT_NOBODY, 1)
+	if err != nil {
+		return fmt.Errorf("Failed to set curl nobody true: ", err.Error())
+	}
+	err = easy.Perform()
+	if err != nil {
+		return fmt.Errorf("Failed to perform NOOP request: ", err.Error())
+	}
+
+	return nil
+}
+
+func (account *EmailAccount) List() error {
+	if !account.isConnected {
+		return fmt.Errorf("The account is not connected.")
+	}
+
+	easy := account.easy
+
+	err := easy.Setopt(curl.OPT_URL, account.URL)
+	if err != nil {
+		return fmt.Errorf("Failed to set curl URL: ", err.Error())
+	}
+	err = easy.Setopt(curl.OPT_CUSTOMREQUEST, "UIDL")
+	if err != nil {
+		return fmt.Errorf("Failed to set custom request: ", err.Error())
+	}
+
+	var msgBuffer bytes.Buffer
+
+	err = easy.Setopt(curl.OPT_WRITEFUNCTION, writeMemoryCallback)
+	if err != nil {
+		return fmt.Errorf("Failed to set curl write callback: ", err.Error())
+	}
+	err = easy.Setopt(curl.OPT_WRITEDATA, &msgBuffer)
+	if err != nil {
+		return fmt.Errorf("Failed to set curl write callback user data: ", err.Error())
+	}
+	err = easy.Perform()
+	if err != nil {
+		return fmt.Errorf("Failed to perform LIST request: ", err.Error())
+	}
+
+	fmt.Printf("MessageBuffer: %v\n", msgBuffer.String())
+	return nil
+}
+
+func (account *EmailAccount) GetFirstMail() (*mail.Message, error) {
+	if !account.isConnected {
+		return nil, fmt.Errorf("The account is not connected.")
+	}
+
+	easy := account.easy
+
+	err := easy.Setopt(curl.OPT_URL, account.URL+"/1")
+	if err != nil {
+		return nil, fmt.Errorf("Failed to set curl URL: ", err.Error())
+	}
+
+	var msgBuffer bytes.Buffer
+
+	err = easy.Setopt(curl.OPT_WRITEFUNCTION, writeMemoryCallback)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to set curl write callback: ", err.Error())
+	}
+	err = easy.Setopt(curl.OPT_WRITEDATA, &msgBuffer)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to set curl write callback user data: ", err.Error())
+	}
+	err = easy.Perform()
+	if err != nil {
+		// failed to read the first message, perhaps there is no first message
+		fmt.Printf("\n### Failed to read first mail: Returning nil. MsgBuffer size = \n\n", msgBuffer.Len())
+
+		return nil, nil
+		//return nil, fmt.Errorf("Failed to perform read first mail request: ", err.Error())
+	}
+	fmt.Printf("\n### MsgBuffer size = \n\n", msgBuffer.Len())
+
+	msg, err := mail.ReadMessage(&msgBuffer) // Read email using Go's net/mail
+	if err != nil {
+		return nil, fmt.Errorf("Failed to read message: ", err.Error())
+	}
+
+	return msg, nil
+}
+
+func (account *EmailAccount) DeleteFirstMail() error {
+	if !account.isConnected {
+		return fmt.Errorf("The account is not connected.")
+	}
+	easy := account.easy
+
+	err := easy.Setopt(curl.OPT_URL, account.URL+"/1")
+	if err != nil {
+		return fmt.Errorf("Failed to set curl URL: ", err.Error())
+	}
+
+	// delete first mail in the mailbox
+	err = easy.Setopt(curl.OPT_CUSTOMREQUEST, "DELE")
+	if err != nil {
+		return fmt.Errorf("Failed to set custom request: ", err.Error())
+	}
+	err = easy.Setopt(curl.OPT_NOBODY, 1)
+	if err != nil {
+		return fmt.Errorf("Failed to set curl nobody true: ", err.Error())
+	}
+	err = easy.Perform()
+	if err != nil {
+		return fmt.Errorf("Failed to perform imap request: ", err.Error())
+	}
+	err = easy.Setopt(curl.OPT_NOBODY, 0)
+	if err != nil {
+		return fmt.Errorf("Failed to set curl nobody false: ", err.Error())
+	}
+
+	return nil
+}
+
+func (account *EmailAccount) ProcessMessage(msg *mail.Message) (*MailData, error) {
+
+	data := new(MailData)
+
+	mime, err := enmime.ParseMIMEBody(msg) // Parse message body with enmime
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parse MIME body: ", err.Error())
+	}
+
+	data.Date, err = msg.Header.Date()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get date from message: ", err.Error())
+	}
+	data.Subject = mime.GetHeader("Subject")
+	data.From = mime.GetHeader("From")
+	data.To = mime.GetHeader("To")
+
+	for _, a := range mime.Attachments {
+		fn, err := checkAndSaveAttachment(a)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to checkAndSaveAttachment: ", err.Error())
+		}
+		if fn != nil {
+			data.Filenames = append(data.Filenames, *fn)
+		}
+	}
+	return data, nil
+}
+
+func checkAndSaveAttachment(attachment enmime.MIMEPart) (*string, error) {
+
+	t := attachment.ContentType()
+	if t != "image/jpeg" && t != "image/png" {
+		return nil, nil
+	}
+
+	var buf []byte
+	buf = attachment.Content()
+
+	fn := attachment.FileName()
+	//		for _, err := os.Stat(fn); err == nil {
+	// TODO: Create unique filename
+	//		}
+
+	// open output file
+	fo, err := os.Create(fn)
+	if err != nil {
+		return nil, err
+	}
+	// close fo on exit and check for its returned error
+	defer func() {
+		if err := fo.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	// write attachement to disk
+	if _, err := fo.Write(buf[:len(buf)]); err != nil {
+		return nil, err
+	}
+
+	return &fn, nil
+}
+
+func writeMemoryCallback(ptr []byte, userdata interface{}) bool {
+	b := userdata.(*bytes.Buffer)
+	b.Write(ptr)
+	return true
+}

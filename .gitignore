@@ -1,0 +1,4 @@
+*.cmsg
+*.rgba
+*._*
+.DS_Store
