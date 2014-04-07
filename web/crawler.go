@@ -3,7 +3,7 @@ package web
 import (
 	"bytes"
 	"encoding/gob"
-	"git.maibornwolff.de/pinboard/grafic2d"
+	"github.com/flothe/pinboard/grafic2d"
 	"fmt"
 	"github.com/jhillyerd/go.enmime"
 	"io/ioutil"
