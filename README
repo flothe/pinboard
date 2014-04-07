@@ -5,6 +5,9 @@ Ein elektronisches Pinboard für die Kaffeeküche zum Anzeigen von Nachrichten a
 INSTALLATION
 ------------
 
+Zu Begin erstmal ein update des Installationssystems:
+sudo apt-get update
+
 Für den OpenVG-Wrapper:
 -----------------------
 sudo apt-get install libjpeg8-dev
@@ -14,3 +17,7 @@ Für die Bildverarbeitung:
 sudo apt-get install imagemagick
 sudo aptitude install libmagickwand-dev
 go get github.com/gosexy/canvas
+
+Für den Mail Crawler
+--------------------
+go get github.com/jhillyerd/go.enmime
