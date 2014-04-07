@@ -1,7 +1,7 @@
 package pinboard
 
 import (
-	"git.maibornwolff.de/pinboard/grafic2d"
+	"github.com/flothe/pinboard/grafic2d"
 	"log"
 	"time"
 	"fmt"

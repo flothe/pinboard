@@ -1,8 +1,8 @@
 package pinboard
 
 import (
-	"git.maibornwolff.de/pinboard/grafic2d"
-	"git.maibornwolff.de/pinboard/web"
+	"github.com/flothe/pinboard/grafic2d"
+	"github.com/flothe/pinboard/web"
 	"os"
 	"strings"
 	"log"

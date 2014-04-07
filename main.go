@@ -2,8 +2,8 @@ package pinboard
 
 import (
 	"bytes"
-	"git.maibornwolff.de/pinboard/grafic2d"
-	"git.maibornwolff.de/pinboard/web"
+	"github.com/flothe/pinboard/grafic2d"
+	"github.com/flothe/pinboard/web"
 	"fmt"
 	"strconv"
 	"time"
