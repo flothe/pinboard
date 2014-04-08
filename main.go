@@ -1,11 +1,8 @@
 package pinboard
 
 import (
-	"bytes"
 	"github.com/flothe/pinboard/grafic2d"
 	"github.com/flothe/pinboard/web"
-	"fmt"
-	"strconv"
 	"time"
 	"bufio"
 	"os"
@@ -23,7 +20,7 @@ func main() {
 	log.Printf("Screen dimension = %vx%v\n", width, height)
 	//spritetest(gfx)
 	var url, user, pw string 
-	if len(os.Args > 3) {
+	if len(os.Args) > 3 {
 		// os.Args[0] holds the programm name
 		url = os.Args[1]
 		user = os.Args[2]
