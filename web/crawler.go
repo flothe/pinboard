@@ -329,12 +329,14 @@ func createUniqueFilename(filename, extension string) string {
 	if n>0 {
 		fn = filename[:n]
 	}
+	// remove all whitespaces
+	fn = strings.Replace(fn, " ", "", -1)
 
 	fnRes := fn+"."+extension
 	_, err := os.Stat(fnRes)
 	i := 0
 	for (err == nil) && i < 10000 {
-		fnRes = fmt.Sprintf("%v%04v.%v", fn, i, extension)
+		fnRes = fmt.Sprintf("%v-%04v.%v", fn, i, extension)
 		_, err = os.Stat(fnRes)
 		i++
 	}

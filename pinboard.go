@@ -73,7 +73,7 @@ func (pb *Pinboard) LoadMessages() error {
 				 log.Println("Failed to load message from file: ", fi)
 				 return err
 		     }
-			 log.Println("Loaded message from file: ", fi)	
+			 log.Println("Loaded message from file: ", data)	
 		 	m := PinMessage(NewMessage(data.ShortText, data.SenderName, data.Timestamp, data.ImageNames))
 			pb.AddMessage(m)		 
          }

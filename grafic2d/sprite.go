@@ -25,7 +25,9 @@ type Sprite struct {
 }
 
 func NewSprite() *Sprite {
-	return new(Sprite)
+	s := new(Sprite)
+	s.Init()
+	return s
 }
 
 
@@ -82,6 +84,7 @@ func (s *Sprite) Init() {
 	s.AnimDuration = 0
 	s.time = 0
 	s.ignoreFirstUpdateMillis = true
+	s.DoNotLoop = false
 }
 
 // initialize the sprite
@@ -162,9 +165,7 @@ func (s *Sprite) Update(ms int) {
 	if s.ignoreFirstUpdateMillis {
 		s.ignoreFirstUpdateMillis = false
 		return
-	}
-	
-
+	}	
 	s.time = s.time + ms
 }
 
@@ -199,6 +200,7 @@ func (s *Sprite) IsAnimationEnded() bool {
 func (s *Sprite) calcImage(ms int) *VGImage {
 
 	if s.AnimDuration == 0 {
+		log.Printf("0 ")
 		return &s.images[0].img
 	}
 	

@@ -19,6 +19,7 @@ func main() {
 	
 	gfx := new(grafic2d.GFXServer)
 	width, height := gfx.Init() // OpenGL, etc initialization
+	defer gfx.Finish() // Graphics cleanup
 	log.Printf("Screen dimension = %vx%v\n", width, height)
 	//spritetest(gfx)
 	var url, user, pw string 
@@ -31,7 +32,6 @@ func main() {
 	
 	showPinboard(gfx, url, user, pw)
 	
-	defer gfx.Finish() // Graphics cleanup
 }
 
 
