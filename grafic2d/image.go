@@ -33,7 +33,7 @@ func NewVGImageFromPaletted(img *image.Paletted) (VGImage, error) {
 	data := make([]C.VGubyte, w*h*4)
 	n := 0
 	var r, g, b, a uint32
-	for yp := 0; yp < h; yp++ {
+	for yp := h-1; yp >= 0; yp-- {
 		for xp := 0; xp < w; xp++ {
 			index := img.Pix[yp*img.Stride + xp]			
 			r, g, b, a = img.Palette[index].RGBA()

@@ -112,22 +112,7 @@ func (ps *PhotoSlider) getActiveImage() (*Sprite) {
 
 func (ps *PhotoSlider) centerAllImages() error {
 	for _, img := range ps.images {
-		// scale to fit
-		factor := math.Min(float64(ps.gfx.DisplayWidth)/float64(img.Width), float64(ps.gfx.DisplayHeight)/float64(img.Height))
-		s := AnimLinear{}
-		s.AddFrame(0, []float32{float32(factor), float32(factor)})
-		log.Printf("Scale image (%vx%v px) for display (%vx%v px): %v", img.Width, img.Height, ps.gfx.DisplayWidth, ps.gfx.DisplayHeight, factor)		
-		img.SetAnimScale(&s)
-	
-		// center
-		t := AnimLinear{}
-		w := float64(img.Width) * factor
-		h := float64(img.Height) * factor
-		dx := (float64(ps.gfx.DisplayWidth) - w) / 2.0
-		dy := (float64(ps.gfx.DisplayHeight) - h) / 2.0 
-		log.Printf("Center image (%vx%v px) for display (%vx%v px): %v, %v", w, h, ps.gfx.DisplayWidth, ps.gfx.DisplayHeight, dx, dy)		
-		t.AddFrame(0, []float32{float32(dx), float32(dy)})
-		img.SetAnimTrans(&t)
+		img.CenterAndFitToScreen(ps.gfx.DisplayWidth, ps.gfx.DisplayHeight)
 	}
 	return nil	
 }

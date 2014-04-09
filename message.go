@@ -1,4 +1,4 @@
-package pinboard
+package main
 
 import (
 	"github.com/flothe/pinboard/grafic2d"
@@ -37,7 +37,7 @@ func (msg *Message) IsReady() bool {
 	return msg.isReady
 }
 
-func (msg *Message) GetTimeMsgShown() int {
+func (msg *Message) GetMsgShowTime() int {
 	return msg.timerMessageShown.TimeSinceStart()
 }
 
@@ -69,6 +69,11 @@ func (msg *Message) End() error {
 	msg.timerMessageShown.Reset()
 	return err
 }
+
+func (msg *Message) Destroy() error {
+	return nil
+}
+
 
 
 func (msg *Message) Update(ms int) error {

@@ -1,4 +1,4 @@
-package pinboard
+package main
 
 import (
 	"github.com/flothe/pinboard/grafic2d"
@@ -7,12 +7,14 @@ import (
 	"bufio"
 	"os"
 	"log"
+	"math/rand"
 )
 
 func main() {
 	
 	log.SetFlags(log.Ldate|log.Ltime|log.Lshortfile)
 	os.Chdir("./data")
+	rand.Seed(time.Now().UTC().UnixNano())
 	
 	
 	gfx := new(grafic2d.GFXServer)
