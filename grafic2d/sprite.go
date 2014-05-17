@@ -5,6 +5,7 @@ import (
 	"os"
 	"log"
 	"fmt"
+	"math"
 )
 
 
@@ -19,10 +20,14 @@ type Sprite struct {
 	AnimDuration                     int
 	animTrans, animScale, animRotate Animation
 	Width, Height                    int
+	DoNotLoop						bool
+	ignoreFirstUpdateMillis	bool
 }
 
 func NewSprite() *Sprite {
-	return new(Sprite)
+	s := new(Sprite)
+	s.Init()
+	return s
 }
 
 
@@ -31,6 +36,8 @@ func NewSpriteFromGif(filename string) (*Sprite, error) {
 	fo, err := os.Open(filename)
 	if err != nil {
 		log.Printf("Failed to open %v (%v).\n", filename, err)
+		wd, _ := os.Getwd()
+		log.Printf("Current working dir: %v\n", wd)
 		return nil, err
 	}
 	// close fo on exit and check for its returned error
@@ -63,6 +70,7 @@ func NewSpriteFromGif(filename string) (*Sprite, error) {
 		ms = ms + gifImg.Delay[i] * 10
 	}
 	s.AnimDuration = ms
+	s.ignoreFirstUpdateMillis = true
 	
 	return s, nil
 }
@@ -75,11 +83,14 @@ func (s *Sprite) Init() {
 	// set default values
 	s.AnimDuration = 0
 	s.time = 0
+	s.ignoreFirstUpdateMillis = true
+	s.DoNotLoop = false
 }
 
 // initialize the sprite
 func (s *Sprite) Reset() {
 	s.time = 0
+	s.ignoreFirstUpdateMillis = true
 }
 
 // clean up the sprite and free all resources
@@ -89,6 +100,7 @@ func (s *Sprite) Destroy() {
 	}
 	s.Width = 0
 	s.Height = 0
+	s.ignoreFirstUpdateMillis = true
 }
 
 // add image to the sprite animation
@@ -122,8 +134,38 @@ func (s *Sprite) SetAnimRotate(anim Animation) {
 	s.animRotate = anim
 }
 
+func (s *Sprite) CenterAndFitToScreen(displayWidth, displayHeight int) {
+	// scale to fit
+	factor := math.Min(float64(displayWidth)/float64(s.Width), float64(displayHeight)/float64(s.Height))
+	sanim := AnimLinear{}
+	sanim.AddFrame(0, []float32{float32(factor), float32(factor)})
+	log.Printf("Scale image (%vx%v px) for display (%vx%v px): %v", s.Width, s.Height, displayWidth, displayHeight, factor)		
+	s.SetAnimScale(&sanim)
+
+	// center
+	tanim := AnimLinear{}
+	w := float64(s.Width) * factor
+	h := float64(s.Height) * factor
+	dx := (float64(displayWidth) - w) / 2.0
+	dy := (float64(displayHeight) - h) / 2.0 
+	log.Printf("Center image (%vx%v px) for display (%vx%v px): %v, %v", w, h, displayWidth, displayHeight, dx, dy)		
+	tanim.AddFrame(0, []float32{float32(dx), float32(dy)})
+	s.SetAnimTrans(&tanim)	
+}
+
+func (s *Sprite) ScaleToScreen(displayWidth, displayHeight int) {
+	// scale to fit
+	sanim := AnimLinear{}
+	sanim.AddFrame(0, []float32{float32(displayWidth)/float32(s.Width), float32(displayHeight)/float32(s.Height)})
+	s.SetAnimScale(&sanim)
+}
+
 
 func (s *Sprite) Update(ms int) {
+	if s.ignoreFirstUpdateMillis {
+		s.ignoreFirstUpdateMillis = false
+		return
+	}	
 	s.time = s.time + ms
 }
 
@@ -147,15 +189,26 @@ func (s *Sprite) Draw() {
 	img.Draw(VGfloat(x), VGfloat(y), VGfloat(sx), VGfloat(sy), VGfloat(rx), VGfloat(ry), VGfloat(rdegree))
 }
 
+func (s *Sprite) IsAnimationEnded() bool {
+	if s.DoNotLoop {
+		return s.time > s.AnimDuration		
+	}
+	return false
+}
+
 
 func (s *Sprite) calcImage(ms int) *VGImage {
 
 	if s.AnimDuration == 0 {
+		log.Printf("0 ")
 		return &s.images[0].img
 	}
-
-	// loop the milliseconds
-	millis := ms % s.AnimDuration
+	
+	millis := ms
+	if !s.DoNotLoop {
+		// loop the milliseconds
+		millis = ms % s.AnimDuration		
+	}
 
 	numImg := 0
 	for (numImg + 1) < len(s.images) {

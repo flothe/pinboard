@@ -1,4 +1,4 @@
-package pinboard
+package main
 
 import (
 	"github.com/flothe/pinboard/grafic2d"
@@ -7,16 +7,19 @@ import (
 	"bufio"
 	"os"
 	"log"
+	"math/rand"
 )
 
 func main() {
 	
 	log.SetFlags(log.Ldate|log.Ltime|log.Lshortfile)
 	os.Chdir("./data")
+	rand.Seed(time.Now().UTC().UnixNano())
 	
 	
 	gfx := new(grafic2d.GFXServer)
 	width, height := gfx.Init() // OpenGL, etc initialization
+	defer gfx.Finish() // Graphics cleanup
 	log.Printf("Screen dimension = %vx%v\n", width, height)
 	//spritetest(gfx)
 	var url, user, pw string 
@@ -29,7 +32,6 @@ func main() {
 	
 	showPinboard(gfx, url, user, pw)
 	
-	defer gfx.Finish() // Graphics cleanup
 }
 
 
